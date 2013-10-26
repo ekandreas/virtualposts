@@ -1,0 +1,13 @@
+/**
+ * Virtual Posts
+ * https://github.com/EkAndreas/virtualposts
+ *
+ * Copyright (c) 2013 Andreas Ek
+ * Licensed under the GPLv2+ license.
+ */
+ 
+( function( window, undefined ) {
+	'use strict';
+
+
+} )( this );
