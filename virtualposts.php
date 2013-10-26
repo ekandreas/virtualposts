@@ -40,6 +40,11 @@ define( 'VPP__VERSION', '0.1.0' );
 define( 'VPP__URL',     plugin_dir_url( __FILE__ ) );
 define( 'VPP__PATH',    dirname( __FILE__ ) . '/' );
 
+include_once 'includes/php_fast_cache.php';
+include_once 'includes/settings.php';
+include_once 'includes/settings-ui.php';
+include_once 'includes/feeds.php';
+
 /**
  * Default initialization for the plugin:
  * - Registers the default textdomain.
