@@ -22,6 +22,7 @@ class VirtualPostsFeeds {
 
 				if( $id == $feed['id'] ){
 
+					add_filter( 'wp_feed_cache_transient_lifetime', create_function( '$a', 'return 1;' ) );
 					$rss = fetch_feed( $feed['url'] );
 
 					if ( ! is_wp_error( $rss ) ) {
