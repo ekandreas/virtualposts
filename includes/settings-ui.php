@@ -11,6 +11,7 @@ class VirtualPostsSettingsUI {
 		add_action( 'admin_menu', array( &$this, 'admin_menu' ) );
 		add_action( 'admin_head', array( &$this, 'admin_head' ) );
 		add_action( 'admin_footer', array( &$this, 'admin_footer' ) );
+		add_action( 'wp_ajax_virtualposts_feeds_save', array( &$this, 'feeds_save' ) );
 	}
 
 	function admin_footer() {
@@ -189,93 +190,66 @@ class VirtualPostsSettingsUI {
 			Add feeds to Virtual Posts
 		</h3>
 
-		<div style="vertical-align: middle; background:#EEEEEE;color:#000;border:1px solid #CCC;padding:10px;margin-top:12px;border-radius:5px;-moz-border-radius:5px;-webkit-border-radius:5px;max-width: 680px">
-			<table>
-				<tr>
-					<td>
-						Name
-					</td>
-					<td>
-						Url
-					</td>
-					<td>
-						Max items
-					</td>
-					<td>
-						TTL
-					</td>
-					<td>
-
-					</td>
-				</tr>
-				<tr>
-					<td><input size="15" type="text" placeholder="Name" data-bind="value: name" />
-					</td>
-					<td><input size="15" type="text" placeholder="Feed Url" data-bind="value: url" />
-					</td>
-					<td><input size="5" type="text" placeholder="Max items" data-bind="value: max" />
-					</td>
-					<td><input size="5" type="text" placeholder="TTL" data-bind="value: ttl" />
-					</td>
-					<td><input type="button" class="button-secondary" value="Add" data-bind="click: addRow" />
-					</td>
-				</tr>
-			</table>
-
-
+		<div style="display:none; vertical-align: middle; background:#FFFFFF;color:#000;border:1px solid #CCC;padding:10px;margin-top:12px;border-radius:5px;-moz-border-radius:5px;-webkit-border-radius:5px;max-width: 680px">
 		</div>
 
 		<br />
 
-		<table class="widefat" style="max-width: 700px" data-bind="visible: feeds().length">
-			<thead>
-			<tr>
-				<th>Name</th>
-				<th>Url</th>
-				<th>Max items</th>
-				<th>Time To Live</th>
-				<th></th>
-				<th></th>
-				<th>Found</th>
-			</tr>
-			</thead>
-			<tfoot>
-			<tr>
-				<th>Name</th>
-				<th>Url</th>
-				<th>Max items</th>
-				<th>Time To Live</th>
-				<th></th>
-				<th></th>
-				<th>Found</th>
-			</tr>
-			</tfoot>
-			<tbody data-bind="foreach: feeds">
-			<tr>
-				<td data-bind="text: name"></td>
-				<td data-bind="text: url"></td>
-				<td data-bind="text: max"></td>
-				<td data-bind="text: ttl + 's'"></td>
-				<td><a href="javascript:return false;" data-bind="click: $root.removeRow">Replace</a></td>
-				<td><a href="javascript:return false;" data-bind="visible: !$data.new, click: $root.test">Fetch</a></td>
-				<td style="text-align: center;">
-					<span data-bind="if: $data.found && !$data.loading"><span data-bind="text: found"></span></span>
-					<span data-bind="if: $data.error && !$data.loading"><a data-bind="attr: { title: error },click: $root.alertError" style="color:#FF3333"><i class="icon-erroralt" style="font-size: 16px;"></i></a></span>
-					<span style="display:none;" data-bind="attr: { id: 'ajax_' + $data.id }"><img src="<?php echo WP_PLUGIN_URL . '/virtualposts/images/AjaxLoader.gif'; ?>" alt="Fetching feed" /></span>
-				</td>
-			</tr>
-			</tbody>
-		</table>
+		<div id="feed_list">
+			<table class="widefat" style="max-width: 700px" data-bind="visible: feeds().length">
+				<thead>
+				<tr>
+					<th>Name</th>
+					<th>Url</th>
+					<th>Max items</th>
+					<th>Found</th>
+				</tr>
+				</thead>
+				<tfoot>
+				<tr>
+					<th>Name</th>
+					<th>Url</th>
+					<th>Max items</th>
+					<th>Found</th>
+				</tr>
+				</tfoot>
+				<tbody data-bind="foreach: feeds">
+				<tr>
+					<td>
+						<strong data-bind="text: name"></strong>
+						<div class="row-actions">
+							<span class="edit"><a href="#" title="Edit" data-bind="click: $root.editRow">Edit</a> | </span>
+							<span class="trash"><a href="#" title="Delete" class="submitdelete" data-bind="click: $root.removeRow">Delete</a> | </span>
+							<span class="fetch"><a href="#" title="Fetch" data-bind="click: $root.test">Fetch</a></span>
+						</div>
+					</td>
+					<td data-bind="text: url"></td>
+					<td data-bind="text: max"></td>
+					<td style="text-align: center;">
+						<span data-bind="if: $data.found && !$data.loading"><span data-bind="text: found"></span></span>
+						<span data-bind="if: $data.error && !$data.loading"><a data-bind="attr: { title: error },click: $root.alertError" style="color:#FF3333"><i class="icon-erroralt" style="font-size: 16px;"></i></a></span>
+						<span style="display:none;" data-bind="attr: { id: 'ajax_' + $data.id }"><img src="<?php echo WP_PLUGIN_URL . '/virtualposts/images/AjaxLoader.gif'; ?>" alt="Fetching feed" /></span>
+					</td>
+				</tr>
+				<tr data-bind="visible: $parent.edit().id==$data.id, template: { name : 'template' }" style="background-color: #FFFFFF;">
+				</tr>
+				</tbody>
+			</table>
 
-		<input name="feeds" type="hidden" data-bind="value: ko.toJSON(feeds, null, 2)" />
+			<input id="feeds_data" name="feeds" type="hidden" data-bind="value: ko.toJSON(feeds, null, 2)" />
+		</div>
+
+		<script id="template" type="text/html">
+				<td><input size="20" type="text" placeholder="Name" data-bind="value: name" /></td>
+				<td><input size="20" type="text" placeholder="Feed Url" data-bind="value: url" /></td>
+				<td><input size="10" type="text" placeholder="Max items" data-bind="value: max" /></td>
+				<td><input type="button" class="button-secondary" value="Save" data-bind="click: $parent.saveRow" /></td>
+		</script>
 
 		<script>
 
-			var feeds_model;
-
 			jQuery(document).ready(function ($) {
-				feeds_model = new VirtualPostsFeedsModel();
-				ko.applyBindings( feeds_model );
+				ko.applyBindings(new VirtualPostsFeedsModel(), document.getElementById('feed_list'));
 			});
 
 			var VirtualPostsFeedsModel = function () {
@@ -289,6 +263,8 @@ class VirtualPostsSettingsUI {
 				self.ttl = ko.observable(3600);
 
 				self.loading = ko.observable('');
+				self.edit = ko.observableArray([]);
+				self.edittable = ko.observable('');
 
 				self.feeds = ko.observableArray(<?php echo json_encode( $settings ); ?>);
 
@@ -316,6 +292,39 @@ class VirtualPostsSettingsUI {
 				self.alertError = function (row) {
 					alert( row.error );
 				};
+
+				self.editRow = function (row) {
+
+					if( self.edit().id == row.id ){
+						self.edit([]);
+						return;
+					}
+
+					self.edit( row );
+
+				};
+
+				self.saveRow = function (row) {
+
+					var index = self.feeds.indexOf(row);
+					self.feeds.replace( self.feeds()[index], { id: row.id, name: row.name, url: row.url, max: row.max } );
+					jQuery.ajax({
+						url     : '<?php echo admin_url('admin-ajax.php'); ?>',
+						method  : "post",
+						data    : {
+							action: 'virtualposts_feeds_save',
+							feeds: jQuery('#feeds_data').val(),
+							'virtualposts_settings_ui-nonce' : '<?php echo wp_create_nonce( 'virtualposts-settings' ); ?>'
+						},
+						dataType: 'json',
+						async   : false,
+						success : function (data) {
+							self.edit([]);
+						}
+					});
+					self.edit([]);
+
+				}
 
 				self.alphaChars = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
 				self.uid = function(uniqIDLength) {
@@ -371,11 +380,15 @@ class VirtualPostsSettingsUI {
 	}
 
 	function feeds_save() {
-		$feeds = json_decode( stripslashes( $_REQUEST['feeds'] ), true );
-		foreach( $feeds as $key => $feed ){
-			unset( $feeds[$key]['new'] );
+
+		if( wp_verify_nonce( $_REQUEST['virtualposts_settings_ui-nonce'], 'virtualposts-settings' ) ){
+			$feeds = json_decode( stripslashes( $_REQUEST['feeds'] ), true );
+			foreach( $feeds as $key => $feed ){
+				unset( $feeds[$key]['new'] );
+			}
+			VirtualPostsSettings::update( 'feeds', $feeds );
 		}
-		VirtualPostsSettings::update( 'feeds', $feeds );
+
 	}
 
 	function posts_form() {
