@@ -44,6 +44,7 @@ include_once 'includes/php_fast_cache.php';
 include_once 'includes/settings.php';
 include_once 'includes/settings-ui.php';
 include_once 'includes/feeds.php';
+include_once 'includes/virtual.php';
 
 /**
  * Default initialization for the plugin:
@@ -72,6 +73,7 @@ register_activation_hook( __FILE__, 'vpp__activate' );
  */
 function vpp__deactivate() {
 
+	flush_rewrite_rules();
 }
 register_deactivation_hook( __FILE__, 'vpp__deactivate' );
 
