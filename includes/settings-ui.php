@@ -299,6 +299,7 @@ class VirtualPostsSettingsUI {
 					self.max(row.max);
 					self.ttl(row.ttl);
 					self.feeds.remove(row);
+					self.saveJson();
 				};
 
 				self.alertError = function (row) {
