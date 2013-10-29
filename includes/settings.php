@@ -12,15 +12,15 @@ class VirtualPostsSettings {
 
 	static function get( $key ) {
 		$options = VirtualPostsSettings::cache();
-		if( !is_array( $options[ $key ] ) ) return array();
-		return $options[ $key ];
+		if ( ! is_array( $options[$key] ) ) return array();
+		return $options[$key];
 	}
 
 	static function update( $key, $value ) {
-		if( !is_array( $value ) ) return;
+		if ( ! is_array( $value ) ) return;
 		$options = unserialize( get_option( VirtualPostsSettings::cache_key ) );
-		if( !is_array( $options ) ) $options = array();
-		$options[ $key ] = $value;
+		if ( ! is_array( $options ) ) $options = array();
+		$options[$key] = $value;
 		update_option( VirtualPostsSettings::cache_key, serialize( $options ) );
 		phpFastCache::delete( VirtualPostsSettings::cache_key );
 	}
@@ -33,12 +33,12 @@ class VirtualPostsSettings {
 		}
 
 		phpFastCache::$storage = VirtualPostsSettings::get_general_cache_type();
-		$options = phpFastCache::get( VirtualPostsSettings::cache_key );
+		$options               = phpFastCache::get( VirtualPostsSettings::cache_key );
 
 		if ( $options == null ) {
 			$options = get_option( VirtualPostsSettings::cache_key );
 			$options = unserialize( $options );
-			if( !$options ) $options = array();
+			if ( ! $options ) $options = array();
 			phpFastCache::set( VirtualPostsSettings::cache_key, $options, VirtualPostsSettings::cache_time );
 		}
 
@@ -46,30 +46,37 @@ class VirtualPostsSettings {
 
 	}
 
-	protected static function get_general_cache_type(){
+	protected static function get_general_cache_type() {
 
 		$result = 'options';
 
 		phpFastCache::$storage = 'auto';
-		$options = phpFastCache::get( VirtualPostsSettings::cache_key );
-		if( is_array( $options ) ){
-			if( is_array( $options[ 'general' ] ) ){
-				if( $options['general']['cache'] ) return $options['general']['cache'];
+		$options               = phpFastCache::get( VirtualPostsSettings::cache_key );
+		if ( is_array( $options ) ) {
+			if ( is_array( $options['general'] ) ) {
+				if ( $options['general']['cache'] ) return $options['general']['cache'];
 			}
 		}
 
-		if( $result == 'options' ){
-			$result = 'auto';
+		if ( $result == 'options' ) {
+			$result  = 'auto';
 			$options = get_option( VirtualPostsSettings::cache_key );
 			$options = unserialize( $options );
-			if( is_array( $options ) ){
-				if( is_array( $options[ 'general' ] ) ){
-					if( $options['general']['cache'] ) return $options['general']['cache'];
+			if ( is_array( $options ) ) {
+				if ( is_array( $options['general'] ) ) {
+					if ( $options['general']['cache'] ) return $options['general']['cache'];
 				}
 			}
 		}
 
 		return $result;
+
+	}
+
+	static function delete_options() {
+
+		delete_option( VirtualPostsSettings::cache_key );
+		phpFastCache::delete( 'virtualposts' );
 
 	}
 

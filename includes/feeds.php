@@ -4,117 +4,155 @@ class VirtualPostsFeeds {
 
 	function __construct() {
 		add_action( 'wp_ajax_virtualposts_feed', array( &$this, 'feed' ) );
+		add_action( 'wp_ajax_nopriv_virtualposts_feed', array( &$this, 'feed' ) );
+
 		add_action( 'wp_ajax_virtualposts_feeds', array( &$this, 'feeds' ) );
+		add_action( 'wp_ajax_virtualposts_clear_cache', array( &$this, 'clear_cache' ) );
+		add_action( 'wp_ajax_virtualposts_cache', array( &$this, 'cache' ) );
+
+		add_filter( 'cron_schedules', array( &$this, 'change_cron_interval' ) );
+		add_action( 'virtualposts_cron_feeds', array( &$this, 'cron' ) );
+
 	}
 
-	function feed(){
+	const posts_cache_key = "virtualposts";
+
+	function feed( $feed_id = null, $output = true ) {
 
 		include_once ABSPATH . WPINC . '/class-simplepie.php';
 		include_once ABSPATH . WPINC . '/feed.php';
 
 		$result = array();
 
-		if( wp_verify_nonce( $_REQUEST['nonce'], 'virtualposts_feed' ) ){
+		$feeds = VirtualPostsSettings::get( 'feeds' );
 
-			$feeds = VirtualPostsSettings::get( 'feeds' );
+		$id = isset( $_REQUEST['id'] ) ? $_REQUEST['id'] : $feed_id;
 
-			$id = $_REQUEST['id'];
+		foreach ( $feeds as $key => $feed ) {
 
-			foreach( $feeds as $key => $feed ){
+			if ( $id == $feed['id'] ) {
 
-				if( $id == $feed['id'] ){
+				$general_settings = VirtualPostsSettings::get( 'general' );
 
-					$general_settings = VirtualPostsSettings::get( 'general' );
+				$rss = new SimplePie();
 
-					$url = $feed['url'];
-					$max = (int)$feed['max'];
-					$name = $feed['name'];
-					$feed_id = $feed['id'];
+				$upload              = wp_upload_dir();
+				$rss->cache_location = $upload['basedir'];
 
-					$feed = new SimplePie();
+				$rss->cache = false;
+				$rss->set_output_encoding();
+				$rss->timeout = $general_settings['timeout'];
+				$rss->set_timeout( $general_settings['timeout'] );
 
-					$upload = wp_upload_dir();
-					$feed->cache_location = $upload['basedir'];
+				$rss->set_feed_url( $feed['url'] );
 
-					$feed->cache = false;
-					$feed->set_output_encoding();
-					$feed->timeout = $general_settings[ 'timeout' ];
-					$feed->set_timeout( $general_settings[ 'timeout' ] );
+				$rss->init();
+				$rss->handle_content_type();
 
-					$feed->set_feed_url( $url );
+				$found = 0;
 
-					$feed->init();
-					$feed->handle_content_type();
+				$feed['fetched'] = current_time( 'mysql' );
 
-					$found = 0;
+				if ( ! $rss->error() ) {
 
-					$feeds[ $key ][ 'fetched' ] = current_time( 'mysql' );
+					$maxitems  = $rss->get_item_quantity( $feed['max'] );
+					$rss_items = $rss->get_items( 0, $maxitems );
+					foreach ( $rss_items as $item ) {
 
-					if ( !$feed->error() ) {
+						$headline = esc_html( $item->get_title() );
+						$title    = sanitize_title( $item->get_title() );
+						$link     = $feed['id'] . '/' . $title;
 
-						$maxitems = $feed->get_item_quantity( $max );
-						$rss_items = $feed->get_items( 0, $maxitems );
-						foreach ( $rss_items as $item ) {
+						$rss_item             = array();
+						$rss_item['title']    = $headline;
+						$rss_item['content']  = $item->get_content();
+						$rss_item['date']     = $item->get_date( 'Y-m-d H:i:s' );
+						$rss_item['date_gmt'] = $item->get_date( 'gmt' );
+						$rss_item['feed']     = $feed['name'];
+						$rss_item['link']     = $link;
+						$rss_item['guid']     = $rss->get_permalink();
 
-							//$item->get_permalink();
-						 	//$item->get_date('j F Y | g:i a');
 
-							$headline = esc_html( $item->get_title() );
-							$title = sanitize_title( $item->get_title() );
-							$link = $feed_id . '/' . $title;
-
-							$rss_item = array();
-							$rss_item[ 'headline' ] = $headline;
-							$rss_item[ 'content' ] = $item->get_content();
-							$rss_item[ 'date' ] = $item->get_date();
-							$rss_item[ 'feed' ] = $name;
-							$rss_item[ 'link' ] = $link;
-
-							$result[] = $rss_item;
-
-							$cache = phpFastCache::get( 'virtualposts' );
-							if( !is_array( $cache ) ) $cache = array();
-							$cache[ $link ] = $rss_item;
-							phpFastCache::set( 'virtualposts', $cache, 3600 );
-
-							$found++;
-
+						if ( $author = $item->get_author() ) {
+							$rss_item['author'] = $author->get_name();
 						}
 
-						$feeds[ $key ][ 'found' ] = $found;
+						$rss_item['preamble'] = $item->get_description();
+
+						$result[] = $rss_item;
+
+						$cache = phpFastCache::get( VirtualPostsFeeds::posts_cache_key );
+						if ( ! is_array( $cache ) ) $cache = array();
+						$cache[$link] = $rss_item;
+						phpFastCache::set( VirtualPostsFeeds::posts_cache_key, $cache, 3600 );
+
+						$found ++;
 
 					}
-					else{
 
-						$feeds[ $key ][ 'error' ] = $feed->error();
-						$feeds[ $key ][ 'found' ] = (int)$found;
+					$feed['found'] = $found;
 
-					}
+				}
+				else {
 
-					VirtualPostsSettings::update( 'feeds', $feeds );
+					$feed['error'] = $rss->error();
+					$feed['found'] = (int) $found;
 
 				}
 
+				$feeds[$key] = $feed;
+				VirtualPostsSettings::update( 'feeds', $feeds );
 
 			}
 
 		}
 
-		echo json_encode( $result );
+		if ( $output ) echo json_encode( $result );
+
 		exit;
 
 	}
 
-	function feeds(){
-
+	function feeds() {
 		$result = VirtualPostsSettings::get( 'feeds' );
-
 		echo json_encode( $result );
 		exit;
-
 	}
 
+	function change_cron_interval( $schedules ) {
+		$general                   = VirtualPostsSettings::get( 'general' );
+		$schedules['virtualposts'] = array(
+			'interval' => $general['interval'] * 60,
+			'display'  => 'Virtual Post Fetch every ' . $general['interval'] . ' minutes'
+		);
+		return $schedules;
+	}
+
+	function cron() {
+		$feeds  = VirtualPostsSettings::get( 'feeds' );
+		$vfeeds = new VirtualPostsFeeds();
+		foreach ( $feeds as $feed ) {
+			$vfeeds->feed( $feed['id'], false );
+		}
+	}
+
+	function clear_cache() {
+		phpFastCache::delete( VirtualPostsFeeds::posts_cache_key );
+		echo "Cache is cleared...";
+		exit;
+	}
+
+	function cache() {
+		$result = array();
+		$posts  = phpFastCache::get( VirtualPostsFeeds::posts_cache_key );
+		foreach ( $posts as $post ) {
+			$result[] = $post;
+		}
+		echo json_encode( $result );
+		exit;
+	}
 
 }
 
 $_virtualposts_feeds = new VirtualPostsFeeds();
+

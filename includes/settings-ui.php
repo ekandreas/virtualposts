@@ -28,14 +28,15 @@ class VirtualPostsSettingsUI {
 		add_submenu_page( 'options-general.php', 'Virtual Posts', __( 'Virtual Posts', 'vpp_' ), 'manage_options', 'virtualposts_settings_ui', array( &$this, 'ui' ) );
 	}
 
-	function display_tabs( $current = 'general' ) {
+	function display_tabs( $current = 'feeds' ) {
+
 		$tabs = array(
-			'feeds' => __( 'Feeds', 'vpp_' ),
-			'posts' => __( 'Posts', 'vpp_' ),
+			'feeds'   => __( 'Feeds', 'vpp_' ),
+			'cache'   => __( 'Cache', 'vpp_' ),
 			'general' => __( 'General', 'vpp_' )
 		);
 
-		if ( ! sizeof( $current ) ) $current = 'general';
+		if ( ! sizeof( $current ) ) $current = 'feeds';
 
 		echo '<div id="icon-themes" class="icon32"><br></div>';
 		echo '<h2 class="nav-tab-wrapper">';
@@ -51,7 +52,7 @@ class VirtualPostsSettingsUI {
 		if ( $_REQUEST['page'] != 'virtualposts_settings_ui' ) return;
 
 		$tab = $_REQUEST['tab'];
-		if ( empty( $tab ) ) $tab = 'general';
+		if ( empty( $tab ) ) $tab = 'feeds';
 
 		if ( isset( $_REQUEST['virtualposts_settings_ui-update'] ) && wp_verify_nonce( $_REQUEST['virtualposts_settings_ui-nonce'], 'virtualposts-settings' ) ) {
 
@@ -128,13 +129,13 @@ class VirtualPostsSettingsUI {
 				<td><i>Cache type for this installation. Drivers installed: <?php
 
 						$system = phpFastCache::systemInfo();
-						if( !$system['drivers'] && is_array( $system['drivers'] ) ) {
+						if ( ! $system['drivers'] && is_array( $system['drivers'] ) ) {
 							echo 'none';
 						}
-						else{
+						else {
 							$first = true;
-							foreach( $system['drivers'] as $driver=>$value ){
-								if( !$first ) echo ', ';
+							foreach ( $system['drivers'] as $driver => $value ) {
+								if ( ! $first ) echo ', ';
 								echo $driver;
 								$first = false;
 							}
@@ -143,11 +144,11 @@ class VirtualPostsSettingsUI {
 						?></i></td>
 			</tr>
 			<tr>
-				<td>Standard Timeout:</td>
+				<td>Fetch interval:</td>
 				<td>
-					<input name="timeout" type="text" value="<?php echo $settings['timeout'] ? $settings['timeout'] : '3600'; ?>" />
+					<input name="interval" type="text" value="<?php echo $settings['interval'] ? $settings['interval'] : '10'; ?>" />
 				</td>
-				<td><i>seconds</i></td>
+				<td><i>minutes between cron jobs to fetch feeds</i></td>
 			</tr>
 			</tbody>
 		</table>
@@ -158,7 +159,7 @@ class VirtualPostsSettingsUI {
 
 			jQuery(document).ready(function ($) {
 				general_model = new VirtualPostsGeneralModel();
-				ko.applyBindings( general_model );
+				ko.applyBindings(general_model);
 			});
 
 			var VirtualPostsGeneralModel = function () {
@@ -171,13 +172,15 @@ class VirtualPostsSettingsUI {
 
 		</script>
 
-		<?php
+	<?php
 	}
 
 	function general_save() {
-		$settings          = VirtualPostsSettings::get( 'general' );
-		$settings['cache'] = esc_attr( $_REQUEST['cache'] );
-		$settings['timeout'] = (int)esc_attr( $_REQUEST['timeout'] );
+		$settings             = VirtualPostsSettings::get( 'general' );
+		$settings['cache']    = esc_attr( $_REQUEST['cache'] );
+		$settings['interval'] = (int) esc_attr( $_REQUEST['interval'] );
+
+
 		VirtualPostsSettings::update( 'general', $settings );
 	}
 
@@ -190,7 +193,12 @@ class VirtualPostsSettingsUI {
 			Add feeds to Virtual Posts
 		</h3>
 
-		<div style="display:none; vertical-align: middle; background:#FFFFFF;color:#000;border:1px solid #CCC;padding:10px;margin-top:12px;border-radius:5px;-moz-border-radius:5px;-webkit-border-radius:5px;max-width: 680px">
+		<div id="new_feed" style="vertical-align: middle; background:#FFFFFF;color:#000;border:1px solid #CCC;padding:10px;margin-top:12px;border-radius:5px;-moz-border-radius:5px;-webkit-border-radius:5px;max-width: 680px">
+			<i class="icon-addtolist"></i>
+			<input size="20" type="text" placeholder="Name" id="new_name" />
+			<input size="20" type="text" placeholder="Feed Url" id="new_url" />
+			<input size="10" type="text" placeholder="Max items" id="new_max" />
+			<input type="button" class="button-secondary" value="Add new" onclick="return add_new_feed();" />
 		</div>
 
 		<br />
@@ -217,6 +225,7 @@ class VirtualPostsSettingsUI {
 				<tr>
 					<td>
 						<strong data-bind="text: name"></strong>
+
 						<div class="row-actions">
 							<span class="edit"><a href="#" title="Edit" data-bind="click: $root.editRow">Edit</a> | </span>
 							<span class="trash"><a href="#" title="Delete" class="submitdelete" data-bind="click: $root.removeRow">Delete</a> | </span>
@@ -240,16 +249,19 @@ class VirtualPostsSettingsUI {
 		</div>
 
 		<script id="template" type="text/html">
-				<td><input size="20" type="text" placeholder="Name" data-bind="value: name" /></td>
-				<td><input size="20" type="text" placeholder="Feed Url" data-bind="value: url" /></td>
-				<td><input size="10" type="text" placeholder="Max items" data-bind="value: max" /></td>
-				<td><input type="button" class="button-secondary" value="Save" data-bind="click: $parent.saveRow" /></td>
+			<td><input size="20" type="text" placeholder="Name" data-bind="value: name" /></td>
+			<td><input size="20" type="text" placeholder="Feed Url" data-bind="value: url" /></td>
+			<td><input size="10" type="text" placeholder="Max items" data-bind="value: max" /></td>
+			<td><input type="button" class="button-secondary" value="Save" data-bind="click: $parent.saveRow" /></td>
 		</script>
 
 		<script>
 
+			var feed_list;
+
 			jQuery(document).ready(function ($) {
-				ko.applyBindings(new VirtualPostsFeedsModel(), document.getElementById('feed_list'));
+				feed_list = new VirtualPostsFeedsModel();
+				ko.applyBindings(feed_list, document.getElementById('feed_list'));
 			});
 
 			var VirtualPostsFeedsModel = function () {
@@ -271,50 +283,57 @@ class VirtualPostsSettingsUI {
 				self.addRow = function () {
 
 					self.feeds.push({
-						id				: self.uid(),
-						name  		: self.name(),
-						url   		: self.url(),
-						max   		: parseInt( self.max() ) | 0,
-						ttl   : parseInt( self.ttl() ) | 0,
-						'new' : true
+						id   : self.uid(),
+						name : self.name(),
+						url  : self.url(),
+						max  : parseInt(self.max()) | 0,
+						ttl  : parseInt(self.ttl()) | 0,
+						'new': true
 					});
 
 				}
 
 				self.removeRow = function (row) {
-					self.name( row.name );
-					self.url( row.url );
-					self.max( row.max );
-					self.ttl( row.ttl );
+					self.name(row.name);
+					self.url(row.url);
+					self.max(row.max);
+					self.ttl(row.ttl);
 					self.feeds.remove(row);
 				};
 
 				self.alertError = function (row) {
-					alert( row.error );
+					alert(row.error);
 				};
 
 				self.editRow = function (row) {
 
-					if( self.edit().id == row.id ){
+					if (self.edit().id == row.id) {
 						self.edit([]);
 						return;
 					}
 
-					self.edit( row );
+					self.edit(row);
 
 				};
 
 				self.saveRow = function (row) {
 
 					var index = self.feeds.indexOf(row);
-					self.feeds.replace( self.feeds()[index], { id: row.id, name: row.name, url: row.url, max: row.max } );
+					self.feeds.replace(self.feeds()[index], { id: row.id, name: row.name, url: row.url, max: row.max });
+					self.saveJson();
+					self.edit([]);
+
+				}
+
+				self.saveJson = function () {
+
 					jQuery.ajax({
 						url     : '<?php echo admin_url('admin-ajax.php'); ?>',
 						method  : "post",
 						data    : {
-							action: 'virtualposts_feeds_save',
-							feeds: jQuery('#feeds_data').val(),
-							'virtualposts_settings_ui-nonce' : '<?php echo wp_create_nonce( 'virtualposts-settings' ); ?>'
+							action                          : 'virtualposts_feeds_save',
+							feeds                           : jQuery('#feeds_data').val(),
+							'virtualposts_settings_ui-nonce': '<?php echo wp_create_nonce( 'virtualposts-settings' ); ?>'
 						},
 						dataType: 'json',
 						async   : false,
@@ -322,15 +341,15 @@ class VirtualPostsSettingsUI {
 							self.edit([]);
 						}
 					});
-					self.edit([]);
 
 				}
 
+
 				self.alphaChars = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
-				self.uid = function(uniqIDLength) {
-					if(!uniqIDLength) uniqIDLength = 10;
+				self.uid = function (uniqIDLength) {
+					if (!uniqIDLength) uniqIDLength = 10;
 					var uniqueID = '', dateStamp = Date().toString().replace(/\s/g, '');
-					for(var uniqIDCounter = 0; uniqIDCounter < uniqIDLength; uniqIDCounter++) {
+					for (var uniqIDCounter = 0; uniqIDCounter < uniqIDLength; uniqIDCounter++) {
 						uniqueID += self.alphaChars[Math.round(Math.random() * 25).toString()];
 						uniqueID += Math.round(Math.random() * 10);
 						//uniqueID += dateStamp.charAt(Math.random() * (dateStamp.length - 1));
@@ -340,13 +359,13 @@ class VirtualPostsSettingsUI {
 
 				self.test = function (row) {
 
-					jQuery('#ajax_'+row.id).show();
+					jQuery('#ajax_' + row.id).show();
 					jQuery.ajax({
 						url     : '<?php echo admin_url('admin-ajax.php'); ?>',
 						method  : "post",
 						data    : {
 							action: 'virtualposts_feed',
-							id : row.id,
+							id    : row.id,
 							nonce : '<?php echo wp_create_nonce( 'virtualposts_feed' ); ?>'
 						},
 						dataType: 'json',
@@ -371,8 +390,13 @@ class VirtualPostsSettingsUI {
 
 				};
 
-
 			}
+
+			var add_new_feed = function () {
+				feed_list.feeds.push({ id: feed_list.uid(), name: jQuery('#new_name').val(), url: jQuery('#new_url').val(), max: jQuery('#new_max').val() });
+				feed_list.saveJson();
+			}
+
 
 		</script>
 
@@ -381,9 +405,9 @@ class VirtualPostsSettingsUI {
 
 	function feeds_save() {
 
-		if( wp_verify_nonce( $_REQUEST['virtualposts_settings_ui-nonce'], 'virtualposts-settings' ) ){
+		if ( wp_verify_nonce( $_REQUEST['virtualposts_settings_ui-nonce'], 'virtualposts-settings' ) ) {
 			$feeds = json_decode( stripslashes( $_REQUEST['feeds'] ), true );
-			foreach( $feeds as $key => $feed ){
+			foreach ( $feeds as $key => $feed ) {
 				unset( $feeds[$key]['new'] );
 			}
 			VirtualPostsSettings::update( 'feeds', $feeds );
@@ -391,16 +415,21 @@ class VirtualPostsSettingsUI {
 
 	}
 
-	function posts_form() {
+	function cache_form() {
 
-		$feeds    = VirtualPostsSettings::get( 'feeds' );
+		$feeds = VirtualPostsSettings::get( 'feeds' );
 
 		?>
 		<h3>
-			Cached posts
+			Current posts in cache
 		</h3>
 
-		<div id="ajaxloader">
+		<p>
+			<button class="button-secondary" data-bind="click: load_cache">Hämta lagrade poster</button>
+			<button class="button-secondary" data-bind="click: reload">Ladda om cache</button>
+		</p>
+
+		<div id="ajaxloader" style="display: none;">
 			<p>
 				<img src="<?php echo WP_PLUGIN_URL . '/virtualposts/images/ajax-rss.gif'; ?>" alt="Loading feeds..." /> Loading feed "<span data-bind="text: loadingName"></span>", please wait!
 			</p>
@@ -424,7 +453,7 @@ class VirtualPostsSettingsUI {
 			<tbody>
 			<tbody data-bind="foreach: posts">
 			<tr>
-				<td><a data-bind="text: headline, attr: { href: '/virtualposts/' + link }" target="_blank"></a></td>
+				<td><a data-bind="text: title, attr: { href: '/virtualposts/' + link }" target="_blank"></a></td>
 				<td data-bind="text: date"></td>
 				<td data-bind="text: feed"></td>
 			</tr>
@@ -440,12 +469,13 @@ class VirtualPostsSettingsUI {
 				$(document).ajaxStart(function () {
 					$("#ajaxloader").show();
 				}).ajaxStop(function () {
-					$("#ajaxloader").hide();
-				});
+							$("#ajaxloader").hide();
+						});
 
 				posts_model = new VirtualPostsPostsModel();
-				ko.applyBindings( posts_model );
-				posts_model.reload();
+				ko.applyBindings(posts_model);
+				posts_model.load_cache();
+
 			});
 
 			var VirtualPostsPostsModel = function () {
@@ -455,31 +485,62 @@ class VirtualPostsSettingsUI {
 				self.posts = ko.observableArray([]);
 				self.loadingName = ko.observable('');
 
-				self.reload = function(){
+				self.reload = function () {
 
-					for( var i=0; i<self.feeds().length; i++ ){
+					jQuery.ajax({
+						url    : '<?php echo admin_url('admin-ajax.php'); ?>',
+						method : "post",
+						data   : {
+							action: 'virtualposts_clear_cache'
+						},
+						async  : false,
+						success: function (data) {
+						}
+					});
+
+					self.posts = ko.observableArray([]);
+					for (var i = 0; i < self.feeds().length; i++) {
 						var id = self.feeds()[i].id;
-						self.load_feed( self.feeds()[i] );
+						self.load_feed(self.feeds()[i]);
 					}
 
 				}
 
-				self.load_feed = function( feed ){
+				self.load_feed = function (feed) {
 
-					self.loadingName( feed.name );
+					self.loadingName(feed.name);
 
 					jQuery.ajax({
 						url     : '<?php echo admin_url('admin-ajax.php'); ?>',
 						method  : "post",
 						data    : {
 							action: 'virtualposts_feed',
-							id : feed.id,
+							id    : feed.id,
 							nonce : '<?php echo wp_create_nonce( 'virtualposts_feed' ); ?>'
 						},
 						dataType: 'json',
 						async   : false,
 						success : function (data) {
-							for( var d=0; d<data.length; d++ ){
+							for (var d = 0; d < data.length; d++) {
+								self.posts.push(data[d]);
+							}
+						}
+					});
+
+				}
+
+				self.load_cache = function () {
+
+					jQuery.ajax({
+						url     : '<?php echo admin_url('admin-ajax.php'); ?>',
+						method  : "post",
+						data    : {
+							action: 'virtualposts_cache'
+						},
+						dataType: 'json',
+						async   : false,
+						success : function (data) {
+							for (var d = 0; d < data.length; d++) {
 								self.posts.push(data[d]);
 							}
 						}
@@ -494,7 +555,7 @@ class VirtualPostsSettingsUI {
 	<?php
 	}
 
-	function posts_save() {
+	function cache_save() {
 		//$posts          = VirtualPostsSettings::get( 'posts' );
 		//VirtualPostsSettings::update( 'posts', $posts );
 	}

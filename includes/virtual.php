@@ -1,93 +1,77 @@
 <?php
 
-class VirtualPostsVirtual{
+class VirtualPostsVirtual {
 
-	private $slug = NULL;
-	private $title = NULL;
-	private $content = NULL;
-	private $author = NULL;
-	private $date = NULL;
-	private $type = NULL;
+	private $rss_item = NULL;
 
 	function __construct( $args ) {
-
-		if (!isset($args['slug']))
-			throw new Exception('No slug given for virtual page');
-
-		$this->slug = $args['slug'];
-		$this->title = isset($args['title']) ? $args['title'] : '';
-		$this->content = isset($args['content']) ? $args['content'] : '';
-		$this->author = isset($args['author']) ? $args['author'] : 1;
-		$this->date = isset($args['date']) ? $args['date'] : current_time('mysql');
-		$this->dategmt = isset($args['date']) ? $args['date'] : current_time('mysql', 1);
-		$this->type = isset($args['type']) ? $args['type'] : 'page';
-
-		add_filter( 'the_posts', array( &$this, 'the_posts') );
+		$this->rss_item = $args;
+		add_filter( 'the_posts', array( &$this, 'the_posts' ) );
 	}
 
-	static function init(){
-
+	static function init() {
 		$url = trim( parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH ), '/' );
 		if ( strpos( $url, 'virtualposts/' ) !== false ) {
-
-			$cache = phpFastCache::get( 'virtualposts' );
-
-			$rss_post = $cache[ str_replace( 'virtualposts/', '', $url ) ];
-
-			if( !$rss_post['headline'] ) return;
-
-			$args = array(
-				'slug' => 'virtualposts',
-				'title' => $rss_post['headline'],
-				'content' => $rss_post['content'],
-				'date' => $rss_post['date']
-			);
-			$pg = new VirtualPostsVirtual( $args );
-
+			$cache     = phpFastCache::get( VirtualPostsFeeds::posts_cache_key );
+			$cache_key = str_replace( 'virtualposts/', '', $url );
+			$rss_post  = $cache[$cache_key];
+			$feed_id   = substr( $cache_key, 0, strpos( $cache_key, "/" ) );
+			if ( ! $rss_post['title'] ) {
+				$url = admin_url( 'admin-ajax.php' ) . '?action=virtualposts_feed&nonce=' . wp_create_nonce( 'virtualposts_feed' ) . '&id=' . $feed_id;
+				wp_remote_get( $url );
+				$cache    = phpFastCache::get( VirtualPostsFeeds::posts_cache_key );
+				$rss_post = $cache[$cache_key];
+				if ( ! $rss_post['title'] ) {
+					return;
+				}
+			}
+			$pg = new VirtualPostsVirtual( $rss_post );
 		}
 	}
 
-	function the_posts( $posts ){
+	function the_posts( $posts ) {
 
-		global $wp, $wp_query;
+		global $wp_query;
 
-		$post = new stdClass;
-		$post->ID = -1;
-		$post->post_author = $this->author;
-		$post->post_date = $this->date;
-		$post->post_date_gmt = $this->dategmt;
-		$post->post_content = $this->content;
-		$post->post_title = $this->title;
-		$post->post_excerpt = '';
-		$post->post_status = 'publish';
-		$post->comment_status = 'closed';
-		$post->ping_status = 'closed';
-		$post->post_password = '';
-		$post->post_name = $this->slug;
-		$post->to_ping = '';
-		$post->pinged = '';
-		$post->modified = $post->post_date;
-		$post->modified_gmt = $post->post_date_gmt;
+		$rss_item = $this->rss_item;
+
+		$post                        = new stdClass;
+		$post->ID                    = - 1;
+		$post->post_author           = $rss_item['author'];
+		$post->post_date             = $rss_item['date'];
+		$post->post_date_gmt         = $rss_item['date_gmt'];
+		$post->post_content          = $rss_item['content'];
+		$post->post_title            = $rss_item['title'];
+		$post->post_excerpt          = $rss_item['excerpt'];
+		$post->post_status           = 'publish';
+		$post->comment_status        = 'closed';
+		$post->ping_status           = 'closed';
+		$post->post_password         = '';
+		$post->post_name             = $rss_item['link'];
+		$post->to_ping               = '';
+		$post->pinged                = '';
+		$post->modified              = $rss_item['date'];
+		$post->modified_gmt          = $rss_item['date_gmt'];
 		$post->post_content_filtered = '';
-		$post->post_parent = 0;
-		$post->guid = get_home_url('/' . $this->slug);
-		$post->menu_order = 0;
-		$post->post_tyle = $this->type;
-		$post->post_mime_type = '';
-		$post->comment_count = 0;
+		$post->post_parent           = 0;
+		$post->guid                  = $rss_item['guid'];
+		$post->menu_order            = 0;
+		$post->post_type             = 'post';
+		$post->post_mime_type        = '';
+		$post->comment_count         = 0;
 
-		$posts = array($post);
+		$posts = array( $post );
 
-		$wp_query->is_page = TRUE;
+		$wp_query->is_page     = TRUE;
 		$wp_query->is_singular = TRUE;
-		$wp_query->is_home = FALSE;
-		$wp_query->is_archive = FALSE;
+		$wp_query->is_home     = FALSE;
+		$wp_query->is_archive  = FALSE;
 		$wp_query->is_category = FALSE;
-		unset($wp_query->query['error']);
+		unset( $wp_query->query['error'] );
 		$wp_query->query_vars['error'] = '';
-		$wp_query->is_404 = FALSE;
+		$wp_query->is_404              = FALSE;
 
-		return ($posts);
+		return ( $posts );
 
 	}
 

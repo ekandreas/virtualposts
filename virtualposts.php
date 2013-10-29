@@ -37,8 +37,8 @@
 
 // Useful global constants
 define( 'VPP__VERSION', '0.1.0' );
-define( 'VPP__URL',     plugin_dir_url( __FILE__ ) );
-define( 'VPP__PATH',    dirname( __FILE__ ) . '/' );
+define( 'VPP__URL', plugin_dir_url( __FILE__ ) );
+define( 'VPP__PATH', dirname( __FILE__ ) . '/' );
 
 include_once 'includes/php_fast_cache.php';
 include_once 'includes/settings.php';
@@ -62,9 +62,11 @@ function vpp__init() {
 function vpp__activate() {
 	// First load the init scripts in case any rewrite functionality is being loaded
 	vpp__init();
-
 	flush_rewrite_rules();
+	wp_schedule_event( current_time( 'timestamp' ), 'virtualposts', 'virtualposts_cron_feeds' );
+
 }
+
 register_activation_hook( __FILE__, 'vpp__activate' );
 
 /**
@@ -74,7 +76,11 @@ register_activation_hook( __FILE__, 'vpp__activate' );
 function vpp__deactivate() {
 
 	flush_rewrite_rules();
+	wp_clear_scheduled_hook( 'virtualposts_cron_feeds' );
+	VirtualPostsSettings::delete_options();
+
 }
+
 register_deactivation_hook( __FILE__, 'vpp__deactivate' );
 
 // Wireup actions
