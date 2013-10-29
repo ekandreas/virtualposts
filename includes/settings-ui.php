@@ -30,6 +30,8 @@ class VirtualPostsSettingsUI {
 
 	function display_tabs( $current = 'feeds' ) {
 
+		$settings = VirtualPostsSettings::get( 'general' );
+
 		$tabs = array(
 			'feeds'   => __( 'Feeds', 'vpp_' ),
 			'cache'   => __( 'Cache', 'vpp_' ),
@@ -42,7 +44,9 @@ class VirtualPostsSettingsUI {
 		echo '<h2 class="nav-tab-wrapper">';
 		foreach ( $tabs as $tab => $name ) {
 			$class = ( $tab == $current ) ? ' nav-tab-active' : '';
-			echo '<a class="nav-tab' . $class . '" href="?page=virtualposts_settings_ui&tab=' . $tab . '">' . $name . '</a>';
+			echo '<a class="nav-tab' . $class . '" href="?page=virtualposts_settings_ui&tab=' . $tab . '">' . $name;
+			if( $tab == 'general' && !$settings['interval'] ) echo ' <i class="icon-erroralt" style="font-size: 16px;color: red;"></i>';
+			echo '</a>';
 		}
 		echo '</h2>';
 	}
@@ -104,6 +108,10 @@ class VirtualPostsSettingsUI {
 		<h3>
 			General settings for Virtual Posts
 		</h3>
+
+		<?php
+		if( !$settings['interval'] ) echo '<p><i class="icon-erroralt" style="font-size: 16px;color: red;"></i> Please save your settings before usage!</p>';
+		?>
 
 		<table class="widefat" style="max-width: 700px">
 			<thead>
