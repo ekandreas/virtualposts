@@ -434,8 +434,8 @@ class VirtualPostsSettingsUI {
 		</h3>
 
 		<p>
-			<button class="button-secondary" data-bind="click: load_cache">Hämta lagrade poster</button>
-			<button class="button-secondary" data-bind="click: reload">Ladda om cache</button>
+			<button class="button-secondary" data-bind="click: load_cache">Show cached posts</button>
+			<button class="button-secondary" data-bind="click: reload">Reload cache from feeds</button>
 		</p>
 
 		<div id="ajaxloader" style="display: none;">
