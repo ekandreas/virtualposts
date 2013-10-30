@@ -3,6 +3,16 @@ module.exports = function( grunt ) {
 	// Project configuration
 	grunt.initConfig( {
 		pkg:    grunt.file.readJSON( 'package.json' ),
+		phpcs: {
+			application: {
+				dir: 'includes'
+			},
+			options: {
+				bin: 'phpcs',
+				standard: 'WordPress',
+				ignore: 'php_fast_cache.php'
+			}
+		},
 		concat: {
 			options: {
 				stripBanners: true,
@@ -146,13 +156,11 @@ module.exports = function( grunt ) {
 	grunt.loadNpmTasks( 'grunt-contrib-clean' );
 	grunt.loadNpmTasks( 'grunt-contrib-copy' );
 	grunt.loadNpmTasks( 'grunt-contrib-compress' );
-	
-	// Default task.
-	
-	grunt.registerTask( 'default', ['jshint', 'concat', 'uglify', 'cssmin'] );
-	
-	
-	grunt.registerTask( 'build', ['default', 'clean', 'copy', 'compress'] );
 
+	grunt.loadNpmTasks('grunt-phpcs');
+
+	// Default task.
+	grunt.registerTask( 'default', ['phpcs', 'jshint', 'concat', 'uglify', 'cssmin'] );
+	grunt.registerTask( 'build', ['default', 'clean', 'copy', 'compress'] );
 	grunt.util.linefeed = '\n';
 };

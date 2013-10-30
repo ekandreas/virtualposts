@@ -15,7 +15,7 @@ class VirtualPostsFeeds {
 
 	}
 
-	const posts_cache_key = "virtualposts";
+	const posts_cache_key = 'virtualposts';
 
 	function feed( $feed_id = null, $output = true ) {
 
@@ -32,26 +32,21 @@ class VirtualPostsFeeds {
 
 			if ( $id == $feed['id'] ) {
 
-				$general_settings = VirtualPostsSettings::get( 'general' );
-
-				$rss = new SimplePie();
-
+				$general_settings    = VirtualPostsSettings::get( 'general' );
+				$rss                 = new SimplePie();
 				$upload              = wp_upload_dir();
 				$rss->cache_location = $upload['basedir'];
+				$rss->cache          = false;
+				$found               = 0;
+				$feed['fetched']     = current_time( 'mysql' );
 
-				$rss->cache = false;
 				$rss->set_output_encoding();
 				$rss->timeout = $general_settings['timeout'];
 				$rss->set_timeout( $general_settings['timeout'] );
-
 				$rss->set_feed_url( $feed['url'] );
-
 				$rss->init();
 				$rss->handle_content_type();
 
-				$found = 0;
-
-				$feed['fetched'] = current_time( 'mysql' );
 
 				if ( ! $rss->error() ) {
 
@@ -85,26 +80,17 @@ class VirtualPostsFeeds {
 						if ( ! is_array( $cache ) ) $cache = array();
 						$cache[$link] = $rss_item;
 						phpFastCache::set( VirtualPostsFeeds::posts_cache_key, $cache, 3600 );
-
 						$found ++;
-
 					}
-
 					$feed['found'] = $found;
-
 				}
 				else {
-
 					$feed['error'] = $rss->error();
 					$feed['found'] = (int) $found;
-
 				}
-
 				$feeds[$key] = $feed;
 				VirtualPostsSettings::update( 'feeds', $feeds );
-
 			}
-
 		}
 
 		if ( $output ) echo json_encode( $result );
@@ -123,7 +109,7 @@ class VirtualPostsFeeds {
 		$general                   = VirtualPostsSettings::get( 'general' );
 		$schedules['virtualposts'] = array(
 			'interval' => $general['interval'] * 60,
-			'display'  => 'Virtual Post Fetch every ' . $general['interval'] . ' minutes'
+			'display'  => 'Virtual Post Fetch every ' . $general['interval'] . ' minutes',
 		);
 		return $schedules;
 	}
@@ -138,7 +124,7 @@ class VirtualPostsFeeds {
 
 	function clear_cache() {
 		phpFastCache::delete( VirtualPostsFeeds::posts_cache_key );
-		echo "Cache is cleared...";
+		echo 'Cache is cleared...';
 		exit;
 	}
 

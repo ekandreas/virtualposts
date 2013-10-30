@@ -20,6 +20,7 @@ include_once 'includes/settings.php';
 include_once 'includes/settings-ui.php';
 include_once 'includes/feeds.php';
 include_once 'includes/virtual.php';
+include_once 'includes/widgetlisting.php';
 
 function vpp__init() {
 	$locale = apply_filters( 'plugin_locale', get_locale(), 'vpp_' );

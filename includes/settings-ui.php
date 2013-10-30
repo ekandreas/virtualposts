@@ -15,12 +15,12 @@ class VirtualPostsSettingsUI {
 	}
 
 	function admin_footer() {
-		if ( $_REQUEST['page'] != 'virtualposts_settings_ui' ) return;
+		if ( isset( $_REQUEST['page'] ) && $_REQUEST['page'] != 'virtualposts_settings_ui' ) return;
 		echo '<script type="text/javascript" src="' . WP_PLUGIN_URL . '/virtualposts/assets/js/vendor/knockout/knockout-3.0.0.js"></script>';
 	}
 
 	function admin_head() {
-		if ( $_REQUEST['page'] != 'virtualposts_settings_ui' ) return;
+		if ( isset( $_REQUEST['page'] ) && $_REQUEST['page'] != 'virtualposts_settings_ui' ) return;
 		echo '<link rel="stylesheet" type="text/css" media="all" href="' . WP_PLUGIN_URL . '/virtualposts/assets/css/src/whhg-font/css/whhg.css" />';
 	}
 
@@ -45,7 +45,9 @@ class VirtualPostsSettingsUI {
 		foreach ( $tabs as $tab => $name ) {
 			$class = ( $tab == $current ) ? ' nav-tab-active' : '';
 			echo '<a class="nav-tab' . $class . '" href="?page=virtualposts_settings_ui&tab=' . $tab . '">' . $name;
-			if( $tab == 'general' && !$settings['interval'] ) echo ' <i class="icon-erroralt" style="font-size: 16px;color: red;"></i>';
+			if ( $tab == 'general' && ! $settings['interval'] ) {
+				echo esc_html( ' <i class="icon-erroralt" style="font-size: 16px;color: red;"></i>' );
+			}
 			echo '</a>';
 		}
 		echo '</h2>';
@@ -78,12 +80,12 @@ class VirtualPostsSettingsUI {
 			<?php $this->display_tabs( $tab ); ?>
 			<form method="post">
 
-				<?php
-				$form_method = $tab . '_form';
-				if ( is_callable( array( $this, $m = $form_method ) ) ) {
-					$this->$form_method();
-				}
-				?>
+		<?php
+		$form_method = $tab . '_form';
+		if ( is_callable( array( $this, $m = $form_method ) ) ) {
+			$this->$form_method();
+		}
+		?>
 
 				<p class="submit">
 					<input type="submit" class="button-primary" value="<?php _e( 'Save', 'mob3' ) ?>" />
@@ -110,7 +112,7 @@ class VirtualPostsSettingsUI {
 		</h3>
 
 		<?php
-		if( !$settings['interval'] ) echo '<p><i class="icon-erroralt" style="font-size: 16px;color: red;"></i> Please save your settings before usage!</p>';
+		if ( ! $settings['interval'] ) echo esc_html( '<p><i class="icon-erroralt" style="font-size: 16px;color: red;"></i> Please save your settings before usage!</p>' );
 		?>
 
 		<table class="widefat" style="max-width: 700px">
@@ -136,25 +138,25 @@ class VirtualPostsSettingsUI {
 				</td>
 				<td><i>Cache type for this installation. Drivers installed: <?php
 
-						$system = phpFastCache::systemInfo();
-						if ( ! $system['drivers'] && is_array( $system['drivers'] ) ) {
-							echo 'none';
-						}
-						else {
-							$first = true;
-							foreach ( $system['drivers'] as $driver => $value ) {
-								if ( ! $first ) echo ', ';
-								echo $driver;
-								$first = false;
-							}
-						}
+		$system = phpFastCache::systemInfo();
+		if ( ! $system['drivers'] && is_array( $system['drivers'] ) ) {
+			echo 'none';
+		}
+		else {
+			$first = true;
+			foreach ( $system[ 'drivers' ] as $driver => $value ) {
+				if ( ! $first ) echo ', ';
+				echo esc_attr( $driver );
+				$first = false;
+			}
+		}
 
-						?></i></td>
+					?></i></td>
 			</tr>
 			<tr>
 				<td>Fetch interval:</td>
 				<td>
-					<input name="interval" type="text" value="<?php echo $settings['interval'] ? $settings['interval'] : '10'; ?>" />
+					<input name="interval" type="text" value="<?php echo absint( $settings['interval'] ? $settings['interval'] : '10' ); ?>" />
 				</td>
 				<td><i>minutes between cron jobs to fetch feeds</i></td>
 			</tr>
@@ -173,7 +175,7 @@ class VirtualPostsSettingsUI {
 			var VirtualPostsGeneralModel = function () {
 
 				var self = this;
-				self.cache = ko.observable('<?php echo $settings['cache']; ?>');
+				self.cache = ko.observable('<?php esc_attr( $settings['cache'] ); ?>');
 				self.availableCache = ko.observableArray(<?php echo json_encode( $cache_types  ); ?>)
 
 			}
@@ -195,6 +197,7 @@ class VirtualPostsSettingsUI {
 	function feeds_form() {
 
 		$settings = VirtualPostsSettings::get( 'feeds' );
+		$ajaxurl  = admin_url( 'admin-ajax.php' );
 
 		?>
 		<h3>
@@ -245,7 +248,7 @@ class VirtualPostsSettingsUI {
 					<td style="text-align: center;">
 						<span data-bind="if: $data.found && !$data.loading"><span data-bind="text: found"></span></span>
 						<span data-bind="if: $data.error && !$data.loading"><a data-bind="attr: { title: error },click: $root.alertError" style="color:#FF3333"><i class="icon-erroralt" style="font-size: 16px;"></i></a></span>
-						<span style="display:none;" data-bind="attr: { id: 'ajax_' + $data.id }"><img src="<?php echo WP_PLUGIN_URL . '/virtualposts/images/AjaxLoader.gif'; ?>" alt="Fetching feed" /></span>
+						<span style="display:none;" data-bind="attr: { id: 'ajax_' + $data.id }"><img src="<?php echo esc_url( WP_PLUGIN_URL . '/virtualposts/images/AjaxLoader.gif' ); ?>" alt="Fetching feed" /></span>
 					</td>
 				</tr>
 				<tr data-bind="visible: $parent.edit().id==$data.id, template: { name : 'template' }" style="background-color: #FFFFFF;">
@@ -337,12 +340,12 @@ class VirtualPostsSettingsUI {
 				self.saveJson = function () {
 
 					jQuery.ajax({
-						url     : '<?php echo admin_url('admin-ajax.php'); ?>',
+						url     : '<?php echo esc_url( $ajaxurl ); ?>',
 						method  : "post",
 						data    : {
 							action                          : 'virtualposts_feeds_save',
 							feeds                           : jQuery('#feeds_data').val(),
-							'virtualposts_settings_ui-nonce': '<?php echo wp_create_nonce( 'virtualposts-settings' ); ?>'
+							'virtualposts_settings_ui-nonce': '<?php echo esc_attr( wp_create_nonce( 'virtualposts-settings' ) ); ?>'
 						},
 						dataType: 'json',
 						async   : false,
@@ -370,19 +373,19 @@ class VirtualPostsSettingsUI {
 
 					jQuery('#ajax_' + row.id).show();
 					jQuery.ajax({
-						url     : '<?php echo admin_url('admin-ajax.php'); ?>',
+						url     : '<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>',
 						method  : "post",
 						data    : {
 							action: 'virtualposts_feed',
 							id    : row.id,
-							nonce : '<?php echo wp_create_nonce( 'virtualposts_feed' ); ?>'
+							nonce : '<?php echo esc_attr( wp_create_nonce( 'virtualposts_feed' ) ); ?>'
 						},
 						dataType: 'json',
 						async   : false,
 						success : function (data) {
 
 							jQuery.ajax({
-								url     : '<?php echo admin_url('admin-ajax.php'); ?>',
+								url     : '<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>',
 								method  : "post",
 								data    : {
 									action: 'virtualposts_feeds'
@@ -440,7 +443,7 @@ class VirtualPostsSettingsUI {
 
 		<div id="ajaxloader" style="display: none;">
 			<p>
-				<img src="<?php echo WP_PLUGIN_URL . '/virtualposts/images/ajax-rss.gif'; ?>" alt="Loading feeds..." /> Loading feed "<span data-bind="text: loadingName"></span>", please wait!
+				<img src="<?php echo esc_url( WP_PLUGIN_URL . '/virtualposts/images/ajax-rss.gif' ); ?>" alt="Loading feeds..." /> Loading feed "<span data-bind="text: loadingName"></span>", please wait!
 			</p>
 		</div>
 
@@ -497,7 +500,7 @@ class VirtualPostsSettingsUI {
 				self.reload = function () {
 
 					jQuery.ajax({
-						url    : '<?php echo admin_url('admin-ajax.php'); ?>',
+						url    : '<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>',
 						method : "post",
 						data   : {
 							action: 'virtualposts_clear_cache'
@@ -520,12 +523,12 @@ class VirtualPostsSettingsUI {
 					self.loadingName(feed.name);
 
 					jQuery.ajax({
-						url     : '<?php echo admin_url('admin-ajax.php'); ?>',
+						url     : '<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>',
 						method  : "post",
 						data    : {
 							action: 'virtualposts_feed',
 							id    : feed.id,
-							nonce : '<?php echo wp_create_nonce( 'virtualposts_feed' ); ?>'
+							nonce : '<?php echo esc_attr( wp_create_nonce( 'virtualposts_feed' ) ); ?>'
 						},
 						dataType: 'json',
 						async   : false,
@@ -541,7 +544,7 @@ class VirtualPostsSettingsUI {
 				self.load_cache = function () {
 
 					jQuery.ajax({
-						url     : '<?php echo admin_url('admin-ajax.php'); ?>',
+						url     : '<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>',
 						method  : "post",
 						data    : {
 							action: 'virtualposts_cache'

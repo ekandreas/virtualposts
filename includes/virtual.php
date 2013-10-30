@@ -15,7 +15,7 @@ class VirtualPostsVirtual {
 			$cache     = phpFastCache::get( VirtualPostsFeeds::posts_cache_key );
 			$cache_key = str_replace( 'virtualposts/', '', $url );
 			$rss_post  = $cache[$cache_key];
-			$feed_id   = substr( $cache_key, 0, strpos( $cache_key, "/" ) );
+			$feed_id   = substr( $cache_key, 0, strpos( $cache_key, '/' ) );
 			if ( ! $rss_post['title'] ) {
 				$url = admin_url( 'admin-ajax.php' ) . '?action=virtualposts_feed&nonce=' . wp_create_nonce( 'virtualposts_feed' ) . '&id=' . $feed_id;
 				wp_remote_get( $url );
