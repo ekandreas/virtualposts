@@ -71,8 +71,11 @@ class VirtualPostsFeeds {
 						if ( $author = $item->get_author() ) {
 							$rss_item['author'] = $author->get_name();
 						}
+						else{
+							$rss_item['author'] = '';
+						}
 
-						$rss_item['preamble'] = $item->get_description();
+						$rss_item['excerpt'] = $item->get_description();
 
 						$result[] = $rss_item;
 

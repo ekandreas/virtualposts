@@ -21,11 +21,31 @@ class VirtualPostsWidgetListing extends WP_Widget {
 	public function widget( $args, $instance ) {
 		$title = apply_filters( 'widget_title', $instance['title'] );
 
-		echo esc_html( $args['before_widget'] );
+		echo wp_kses_post( $args['before_widget'] );
 		if ( ! empty( $title ) )
-			echo esc_html( $args['before_title'] . $title . $args['after_title'] );
-		echo esc_html( 'Hello, World!' );
-		echo esc_html( $args['after_widget'] );
+			echo wp_kses_post( $args['before_title'] . $title . $args['after_title'] );
+
+		$posts  = phpFastCache::get( VirtualPostsFeeds::posts_cache_key );
+
+		// sort by pubdate
+		function cmp($a, $b)
+		{
+			$a = strtotime( $a['date'] );
+			$b = strtotime( $b['date'] );
+
+			if ( $a[''] == $b[''] ) {
+				return 0;
+			}
+			return ($a < $b) ? -1 : 1;
+		}
+
+		usort( $posts, "cmp" );
+
+		foreach ( $posts as $post ) {
+			echo wp_kses_post( '<div class="virtualposts_post"><a title="' . substr( strip_tags( $post['excerpt'] ) . '...', 0, 100 ) . '..." href="/virtualposts/' . $post['link'] . '"><h3>' . $post['title'] . '</h3></a></p>' );
+		}
+
+		echo wp_kses_post( $args['after_widget'] );
 	}
 
 	public function form( $instance ) {
