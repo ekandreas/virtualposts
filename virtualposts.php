@@ -32,12 +32,13 @@ function vpp__activate() {
 
 	vpp__init();
 	flush_rewrite_rules();
-	wp_schedule_event( current_time( 'timestamp' ), 'virtualposts', 'virtualposts_cron_feeds' );
 	$general = array(
 		'apc' => 'auto',
 		'interval' => '20'
 	);
 	VirtualPostsSettings::update( 'general', $general );
+
+	wp_schedule_event( current_time( 'timestamp' ), 'virtualposts', 'virtualposts_cron_feeds' );
 
 }
 register_activation_hook( __FILE__, 'vpp__activate' );
@@ -45,7 +46,9 @@ register_activation_hook( __FILE__, 'vpp__activate' );
 function vpp__deactivate() {
 
 	flush_rewrite_rules();
+
 	wp_clear_scheduled_hook( 'virtualposts_cron_feeds' );
+
 	VirtualPostsSettings::delete_options();
 
 }
