@@ -44,7 +44,13 @@ class VirtualPostsWidgetListing extends WP_Widget {
 		usort( $posts, 'cmp' );
 
 		foreach ( $posts as $post ) {
-			echo wp_kses_post( '<div class="virtualposts_post"><a title="' . substr( strip_tags( $post['excerpt'] ) . '...', 0, 100 ) . '..." href="/virtualposts/' . $post['link'] . '"><h3>' . $post['title'] . '</h3></a></p>' );
+			?>
+			<div class="virtualposts_post">
+				<a title="<?php echo wp_kses_post( substr( strip_tags( $post['excerpt'] ) . '...', 0, 100 ) . '...' ); ?>" href="/virtualposts/<?php echo esc_attr( $post['link'] ); ?>">
+					<h3><?php echo esc_attr( $post['title'] ); ?></h3>
+				</a>
+			</div>
+			<?php
 		}
 
 		echo wp_kses_post( $args['after_widget'] );
