@@ -10,6 +10,7 @@ class VirtualPostsVirtual {
 	}
 
 	static function init() {
+
 		$url = trim( parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH ), '/' );
 		if ( strpos( $url, 'virtualposts/' ) !== false ) {
 			$cache     = phpFastCache::get( VirtualPostsFeeds::posts_cache_key );
@@ -75,7 +76,15 @@ class VirtualPostsVirtual {
 
 	}
 
+	static function add_rewrite_rules( $wp_rewrite )
+	{
+		$new_rules = array(
+			'(virtualposts)/(.*?)/?(.*?)/?$' => 'index.php?pagename=virtualposts&feed_id=' . $wp_rewrite->preg_index( 2 ) . '&url=' . $wp_rewrite->preg_index( 3 ),
+		);
+		$wp_rewrite->rules = $new_rules + $wp_rewrite->rules;
+	}
+
 }
 
 add_action( 'init', 'VirtualPostsVirtual::init' );
-
+add_action( 'generate_rewrite_rules', 'VirtualPostsVirtual::add_rewrite_rules' );

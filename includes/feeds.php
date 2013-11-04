@@ -41,8 +41,8 @@ class VirtualPostsFeeds {
 				$feed['fetched']     = current_time( 'mysql' );
 
 				$rss->set_output_encoding();
-				$rss->timeout = $general_settings['timeout'];
-				$rss->set_timeout( $general_settings['timeout'] );
+				$rss->timeout = 10;
+				$rss->set_timeout( 10 );
 				$rss->set_feed_url( $feed['url'] );
 				$rss->init();
 				$rss->handle_content_type();
@@ -71,7 +71,7 @@ class VirtualPostsFeeds {
 						if ( $author = $item->get_author() ) {
 							$rss_item['author'] = $author->get_name();
 						}
-						else{
+						else {
 							$rss_item['author'] = '';
 						}
 
@@ -109,11 +109,15 @@ class VirtualPostsFeeds {
 	}
 
 	function change_cron_interval( $schedules ) {
-		$general                   = VirtualPostsSettings::get( 'general' );
-		$schedules['virtualposts'] = array(
-			'interval' => $general['interval'] * 60,
-			'display'  => 'Virtual Post Fetch every ' . $general['interval'] . ' minutes',
-		);
+		$general = VirtualPostsSettings::get( 'general' );
+
+		if ( $general && is_array( $general ) ) {
+			$schedules['virtualposts'] = array(
+				'interval' => $general['interval'] * 60,
+				'display'  => 'Virtual Post Fetch every ' . $general['interval'] . ' minutes',
+			);
+		}
+
 		return $schedules;
 	}
 
@@ -134,9 +138,13 @@ class VirtualPostsFeeds {
 	function cache() {
 		$result = array();
 		$posts  = phpFastCache::get( VirtualPostsFeeds::posts_cache_key );
-		foreach ( $posts as $post ) {
-			$result[] = $post;
+
+		if ( is_array( $posts ) && sizeof( $posts ) > 0 ) {
+			foreach ( $posts as $post ) {
+				$result[] = $post;
+			}
 		}
+
 		echo json_encode( $result );
 		exit;
 	}

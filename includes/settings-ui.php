@@ -57,8 +57,7 @@ class VirtualPostsSettingsUI {
 
 		if ( $_REQUEST['page'] != 'virtualposts_settings_ui' ) return;
 
-		$tab = $_REQUEST['tab'];
-		if ( empty( $tab ) ) $tab = 'feeds';
+		$tab = empty( $_REQUEST['tab'] ) ? $tab = 'feeds' : $_REQUEST['tab'];
 
 		if ( isset( $_REQUEST['virtualposts_settings_ui-update'] ) && wp_verify_nonce( $_REQUEST['virtualposts_settings_ui-nonce'], 'virtualposts-settings' ) ) {
 
@@ -175,7 +174,7 @@ class VirtualPostsSettingsUI {
 			var VirtualPostsGeneralModel = function () {
 
 				var self = this;
-				self.cache = ko.observable('<?php esc_attr( $settings['cache'] ); ?>');
+				self.cache = ko.observable( '<?php echo esc_attr( array_key_exists( 'cache', $settings ) ? esc_attr( $settings['cache'] ) : 'auto' ); ?>' );
 				self.availableCache = ko.observableArray(<?php echo json_encode( $cache_types  ); ?>)
 
 			}
@@ -189,8 +188,6 @@ class VirtualPostsSettingsUI {
 		$settings             = VirtualPostsSettings::get( 'general' );
 		$settings['cache']    = esc_attr( $_REQUEST['cache'] );
 		$settings['interval'] = (int) esc_attr( $_REQUEST['interval'] );
-
-
 		VirtualPostsSettings::update( 'general', $settings );
 	}
 

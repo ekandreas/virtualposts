@@ -3,7 +3,7 @@
  * Plugin Name: Virtual Posts
  * Plugin URI:  https://github.com/EkAndreas/virtualposts
  * Description: Show any feed as your own content in WP
- * Version:     0.1.0
+ * Version:     0.2
  * Author:      Andreas Ek
  * Author URI:  http://www.flowcom.se
  * License:     GPLv2+
@@ -29,6 +29,7 @@ function vpp__init() {
 }
 
 function vpp__activate() {
+
 	vpp__init();
 	flush_rewrite_rules();
 	wp_schedule_event( current_time( 'timestamp' ), 'virtualposts', 'virtualposts_cron_feeds' );
@@ -37,6 +38,7 @@ function vpp__activate() {
 		'interval' => '20'
 	);
 	VirtualPostsSettings::update( 'general', $general );
+
 }
 register_activation_hook( __FILE__, 'vpp__activate' );
 

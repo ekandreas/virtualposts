@@ -25,10 +25,12 @@ class VirtualPostsWidgetListing extends WP_Widget {
 		if ( ! empty( $title ) )
 			echo wp_kses_post( $args['before_title'] . $title . $args['after_title'] );
 
-		$posts  = phpFastCache::get( VirtualPostsFeeds::posts_cache_key );
+		$posts = phpFastCache::get( VirtualPostsFeeds::posts_cache_key );
+
+		if ( ! $posts ) return;
 
 		// sort by pubdate
-		function cmp($a, $b)
+		function cmp( $a, $b )
 		{
 			$a = strtotime( $a['date'] );
 			$b = strtotime( $b['date'] );
@@ -39,7 +41,7 @@ class VirtualPostsWidgetListing extends WP_Widget {
 			return ($a < $b) ? -1 : 1;
 		}
 
-		usort( $posts, "cmp" );
+		usort( $posts, 'cmp' );
 
 		foreach ( $posts as $post ) {
 			echo wp_kses_post( '<div class="virtualposts_post"><a title="' . substr( strip_tags( $post['excerpt'] ) . '...', 0, 100 ) . '..." href="/virtualposts/' . $post['link'] . '"><h3>' . $post['title'] . '</h3></a></p>' );

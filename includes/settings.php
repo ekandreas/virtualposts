@@ -12,7 +12,7 @@ class VirtualPostsSettings {
 
 	static function get( $key ) {
 		$options = VirtualPostsSettings::cache();
-		if ( ! is_array( $options[$key] ) ) return array();
+		if ( ! $options || ! array_key_exists( $key, $options ) || ! is_array( $options[$key] ) ) return array();
 		return $options[$key];
 	}
 
@@ -52,9 +52,9 @@ class VirtualPostsSettings {
 
 		phpFastCache::$storage = 'auto';
 		$options               = phpFastCache::get( VirtualPostsSettings::cache_key );
-		if ( is_array( $options ) ) {
-			if ( is_array( $options['general'] ) ) {
-				if ( $options['general']['cache'] ) return $options['general']['cache'];
+		if ( $options && is_array( $options ) ) {
+			if ( $options['general'] && is_array( $options['general'] ) ) {
+				if ( array_key_exists( 'cache', $options['general'] ) ) return $options['general']['cache'];
 			}
 		}
 
@@ -64,7 +64,7 @@ class VirtualPostsSettings {
 			$options = unserialize( $options );
 			if ( is_array( $options ) ) {
 				if ( is_array( $options['general'] ) ) {
-					if ( $options['general']['cache'] ) return $options['general']['cache'];
+					if ( array_key_exists( 'cache', $options['general'] ) ) return $options['general']['cache'];
 				}
 			}
 		}
