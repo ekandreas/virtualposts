@@ -126,6 +126,7 @@ class VirtualPostsFeeds {
 		$vfeeds = new VirtualPostsFeeds();
 		foreach ( $feeds as $feed ) {
 			$vfeeds->feed( $feed['id'], false );
+			echo esc_attr( $feed['name'] . ' loaded...<br/>' );
 		}
 	}
 
