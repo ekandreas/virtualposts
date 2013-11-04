@@ -23,9 +23,15 @@ include_once 'includes/virtual.php';
 include_once 'includes/widgetlisting.php';
 
 function vpp__init() {
+	
 	$locale = apply_filters( 'plugin_locale', get_locale(), 'vpp_' );
 	load_textdomain( 'vpp_', WP_LANG_DIR . '/vpp_/vpp_-' . $locale . '.mo' );
 	load_plugin_textdomain( 'vpp_', false, dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
+
+	if ( ! wp_next_scheduled( 'virtualposts_cron_feeds' ) ) {
+		wp_schedule_event( time(), 'virtualposts', 'virtualposts_cron_feeds');
+	}
+
 }
 
 function vpp__activate() {
